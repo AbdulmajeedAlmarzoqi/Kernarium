@@ -239,9 +239,9 @@ requires reopening Andarium.
 - **VoiceOver.** Every screen is usable with VoiceOver: a new screen, the start
   of a run and how an operation ended are announced (`VoiceOver`), the busy and
   low-space screens are modal, and the closed side keys carry actions that move
-  them and turn TalkBack on or off. Android's display is one element, "Android
-  screen" (`GuestDisplayAccessibility`); while TalkBack is on in the guest it is
-  a direct-touch area, so touches reach Android and TalkBack speaks instead of
+  them and turn TalkBack on or off. Android's display is one element
+  (`GuestDisplayAccessibility`); while TalkBack is on in the guest it is a
+  direct-touch area, so touches reach Android and TalkBack speaks instead of
   VoiceOver.
 - **Retina.** Retina mode applies at the next start and uses the screen's
   native pixels, whose host allocations count against the same iOS process

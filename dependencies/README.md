@@ -57,7 +57,8 @@ script below; per-platform contracts are under [`platforms/`](platforms).
   the one builder that is not offline: Gradle fetches the applications' Maven
   dependencies and eSpeak NG's wrapper, and eSpeak NG's CMake fetches libsonic.
   The TalkBack series ([`patches/talkback`](patches/talkback/series.tsv)) builds
-  it on an Apple silicon host. A guest takes an update of either only from the
+  it on an Apple silicon host and leaves every Google Play services library out
+  of the phone build, which recognises no text in images (OCR) as a result. A guest takes an update of either only from the
   key that signed its copy, so builds that ship sign with one kept key
   (`--keystore`).
 - `x86-conformance`: the test-only FEX and K x86-64 corpora and their pinned

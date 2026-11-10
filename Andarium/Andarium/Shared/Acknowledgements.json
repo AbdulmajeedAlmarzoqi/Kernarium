@@ -331,15 +331,16 @@
    "frameworks": [],
    "components": [],
    "licenses": [
-    "apache-2.0"
+    "apache-2.0",
+    "lgpl-2.1"
    ],
    "texts": [],
    "id": "talkback",
    "group": "accessibility",
    "name": "TalkBack",
-   "copyright": "Google LLC",
-   "license": "Apache License 2.0",
-   "spdx": "Apache-2.0"
+   "copyright": "Google LLC; braille: 1995-2024 The BRLTTY Developers, 2004-2006 ViewPlus Technologies, Inc., JJB Software, Inc. and other liblouis contributors",
+   "license": "Apache License 2.0; its braille libraries BRLTTY and liblouis: GNU LGPL v2.1 or later",
+   "spdx": "Apache-2.0 AND LGPL-2.1-or-later"
   },
   {
    "frameworks": [],
