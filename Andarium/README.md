@@ -329,9 +329,10 @@ is on. `AndariumCore/Adb` speaks the protocol.
   (`ScreenReader.turnsOnByItself`), so Android's setup speaks from its first
   page; later starts leave TalkBack as the person left it.
   The application carries them when `.build/andarium-accessibility` holds
-  `TalkBack.apk` and `eSpeakNG.apk` at build time (the target's "Bundle
-  TalkBack" phase copies them to `Accessibility/`); a build without them offers
-  TalkBack only to a guest whose system has it.
+  `TalkBack.apk` and `eSpeakNG.apk` at build time
+  (`dependencies/build-andarium-accessibility.sh` stages them, and the target's
+  "Bundle TalkBack" phase copies them to `Accessibility/`); a build without them
+  offers TalkBack only to a guest whose system has it.
 - **Create bug report and Install APK** are in every build, in a normal
   session. A bug report is Android's zip with Andarium's session records and
   MetricKit reports added under `andarium/`, the application's container paths

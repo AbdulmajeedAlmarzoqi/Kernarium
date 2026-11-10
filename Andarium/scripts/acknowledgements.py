@@ -51,6 +51,7 @@ GROUPS = [
     {"id": "system", "title": "Operating system"},
     {"id": "graphics", "title": "Graphics"},
     {"id": "libraries", "title": "Libraries"},
+    {"id": "accessibility", "title": "Accessibility"},
 ]
 
 # Where each license text comes from: (source, path). A source is a directory
@@ -68,6 +69,8 @@ SOURCES = {
     "pcre2": "pcre2",
     "proxy-libintl": "proxy-libintl",
     "zstd": "zstd",
+    "talkback": "talkback",
+    "espeak-ng": "espeak-ng",
 }
 
 MESA_HOLDERS = (
@@ -387,6 +390,28 @@ def projects(texts: Texts) -> list[dict]:
             frameworks=["LibZstd"],
             components=["zstd-decompression"],
             texts=[own(None, "zstd", "LICENSE")],
+        ),
+        # The screen reader and its voice, which Andarium installs into a guest
+        # without them when the build carries their APKs
+        # (dependencies/build-andarium-accessibility.sh).
+        entry(
+            id="talkback",
+            group="accessibility",
+            name="TalkBack",
+            copyright="Google LLC",
+            license="Apache License 2.0",
+            spdx="Apache-2.0",
+            licenses=["apache-2.0"],
+        ),
+        entry(
+            id="espeak-ng",
+            group="accessibility",
+            name="eSpeak NG",
+            copyright="2005-2015 Jonathan Duddington; 2012-2026 Reece H. Dunn; Google Inc. and other eSpeak NG contributors",
+            license="GNU GPL v3 or later; Apache License 2.0 for parts of the Android app",
+            spdx="GPL-3.0-or-later AND Apache-2.0",
+            licenses=["apache-2.0"],
+            texts=[own("GNU General Public License, Version 3", "espeak-ng", "COPYING")],
         ),
     ]
 

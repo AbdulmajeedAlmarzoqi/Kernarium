@@ -25,6 +25,7 @@ script below; per-platform contracts are under [`platforms/`](platforms).
 | `ios-compression` | `build-ios-zstd.sh` |
 | `kernel-host-tools` | `build-kernel-host-tools.sh`, after `prepare.sh --archive-manifest kernel-host-tools/archives.tsv` |
 | `x86-conformance` | none: prepared only |
+| `andarium-accessibility` | `build-andarium-accessibility.sh` |
 
 - `macos`: non-graphics static host libraries at
   `.build/dependencies/macos-arm64-27`. It also carries FEXCore for the
@@ -49,6 +50,16 @@ script below; per-platform contracts are under [`platforms/`](platforms).
 - `kernel-host-tools`: pahole and the static libelf the Darwin kernel build
   uses for BTF, at `.build/dependencies/kernel-host-tools`; patch-managed
   Darwin ports that run only on the build host.
+- `andarium-accessibility`: TalkBack and eSpeak NG, the screen reader and the
+  voice Andarium installs into a guest without them, built with Gradle as two
+  signed APKs staged in `.build/andarium-accessibility`
+  ([`../Andarium/README.md`](../Andarium/README.md#android-operations)). It is
+  the one builder that is not offline: Gradle fetches the applications' Maven
+  dependencies and eSpeak NG's wrapper, and eSpeak NG's CMake fetches libsonic.
+  The TalkBack series ([`patches/talkback`](patches/talkback/series.tsv)) builds
+  it on an Apple silicon host. A guest takes an update of either only from the
+  key that signed its copy, so builds that ship sign with one kept key
+  (`--keystore`).
 - `x86-conformance`: the test-only FEX and K x86-64 corpora and their pinned
   producer inputs, used to generate the checked-in x86 unit corpus (see
   [`../tools/fex-tests/README.md`](../tools/fex-tests/README.md)).
