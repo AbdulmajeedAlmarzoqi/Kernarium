@@ -144,6 +144,7 @@ struct InfoSheet: View {
                         }
                     }
                     .padding(.vertical, 6)
+                    .accessibilityElement(children: .combine)
                 }
                 Section("System info") {
                     LabeledContent("Build", value: model.system.buildLabel)

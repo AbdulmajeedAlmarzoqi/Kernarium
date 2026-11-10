@@ -34,6 +34,9 @@ struct AppEntry {
     var device: String?
     /// The guest's memory, in MiB, instead of the default a new guest gets.
     var memoryMiB: Int?
+    /// The model takes VoiceOver as running, which the Simulator never has,
+    /// so a first start plays TalkBack turning on by itself.
+    var voiceOver: Bool
 
     static func fromArguments() -> AppEntry {
         let defaults = UserDefaults.standard
@@ -47,7 +50,8 @@ struct AppEntry {
             statsReadings: defaults.string(forKey: "statsReadings").flatMap { Int($0) },
             statsVramMiB: defaults.string(forKey: "statsVramMiB").flatMap { Int($0) },
             device: defaults.string(forKey: "device"),
-            memoryMiB: defaults.string(forKey: "memoryMiB").flatMap { Int($0) }
+            memoryMiB: defaults.string(forKey: "memoryMiB").flatMap { Int($0) },
+            voiceOver: defaults.bool(forKey: "voiceOver")
         )
     }
 
@@ -105,6 +109,7 @@ struct AppEntry {
             createRequirementBytes: PreviewData.createRequirementBytes
         )
         let freeze = !play
+        if voiceOver { model.voiceOverRunning = { true } }
 
         func boot(_ kind: BootKind, stage: Int, seconds: Int) {
             model.frozenBootStage = freeze ? (bootStage ?? stage) : nil

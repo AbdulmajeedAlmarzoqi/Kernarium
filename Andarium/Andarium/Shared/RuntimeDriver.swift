@@ -119,6 +119,21 @@ protocol RuntimeDriver: AnyObject {
     /// Whether the guest's USB debugging setting is on; nil when it cannot be
     /// read now.
     func usbDebugging() async -> Bool?
+    /// Whether this build carries TalkBack and eSpeak NG to install into a
+    /// guest whose system has no TalkBack.
+    var carriesScreenReader: Bool { get }
+    /// TalkBack in the guest; nil when the guest cannot be asked now.
+    func readScreenReader() async -> ScreenReaderState?
+    /// Turns TalkBack on or off in the guest whose state is `state`, keeping
+    /// every other accessibility service; returns the state after.
+    func setScreenReader(_ on: Bool, in state: ScreenReaderState) async throws -> ScreenReaderState
+    /// Installs the TalkBack and eSpeak NG this build carries, where the guest
+    /// lacks them, and returns the state after; TalkBack is not turned on.
+    func installScreenReader(
+        in state: ScreenReaderState, update: @escaping @Sendable (BusyUpdate) -> Void
+    ) async throws -> ScreenReaderState
+    /// Opens Android's Accessibility page on the guest's screen.
+    func openAccessibilitySettings() async throws
     /// Opens the listener of ADB over the network on the device's network
     /// addresses. Throws when it cannot (`AdbError.io(EADDRINUSE)` for a
     /// port in use).

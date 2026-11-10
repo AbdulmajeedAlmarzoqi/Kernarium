@@ -63,6 +63,11 @@ final class SessionState {
     /// The side keys are open. The session owns it because a touch on the
     /// guest's display, which is another view, closes them.
     var sideKeysOpen = false
+    /// TalkBack in the guest as last read; nil until it has been, or when
+    /// the guest could not be asked.
+    var screenReader: ScreenReaderState?
+    /// TalkBack is being turned on or off.
+    var screenReaderChanging = false
 
     /// The address the preview shows, from the range reserved for examples.
     static let previewAddress = "198.51.100.23"
@@ -208,6 +213,12 @@ final class AppModel {
     /// How often the watcher looks while ADB over network is on: the address
     /// every time, the USB debugging setting every fifth. A test shortens it.
     var adbWatchInterval = Duration.seconds(2)
+    /// Whether VoiceOver is running; a test answers for it.
+    @ObservationIgnored var voiceOverRunning: @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning }
+    /// TalkBack in the preview's mock guest, which has none until the side
+    /// keys install it. It outlives a run, as an install in a guest does.
+    @ObservationIgnored var previewScreenReader = ScreenReaderState(
+        installedService: nil, enabledServices: [], speechEngineInstalled: false)
 
     // MARK: Statistics state
 
@@ -624,6 +635,144 @@ final class AppModel {
         }
     }
 
+    // MARK: TalkBack
+
+    /// What the side keys offer for TalkBack now.
+    var screenReaderOffer: ScreenReaderOffer {
+        ScreenReaderOffer(state: session.screenReader, carriesScreenReader: driver?.carriesScreenReader ?? true)
+    }
+
+    /// Whether the session offers TalkBack: a normal run, whose Android the
+    /// runtime's adb channel reaches. Recovery has no TalkBack.
+    var offersScreenReader: Bool {
+        guard capabilities.screenReader, case .running(.normal) = phase else { return false }
+        return true
+    }
+
+    /// Reads TalkBack's state from the guest. The side keys ask each time they
+    /// open, so the switch shows what Android's own settings last did.
+    func refreshScreenReader() async {
+        // A guest paused for space is not asked: a connection waits for it.
+        guard offersScreenReader, spacePause == nil, !session.screenReaderChanging else { return }
+        let current = session
+        let state = if let driver { await driver.readScreenReader() } else { previewScreenReader }
+        guard session === current, offersScreenReader, !current.screenReaderChanging, let state else { return }
+        if current.screenReader != state { current.screenReader = state }
+    }
+
+    /// Turns TalkBack on or off. A guest without TalkBack gets the copy the
+    /// application carries first, behind the busy overlay, which then says how
+    /// to use it; otherwise the switch changes at once and VoiceOver says so.
+    func setScreenReader(_ on: Bool) {
+        guard offersScreenReader, spacePause == nil, busy == nil, !session.screenReaderChanging else { return }
+        let current = session
+        guard let state = current.screenReader else {
+            Task { await refreshScreenReader() }
+            return
+        }
+        guard state.isOn != on else { return }
+        if on && !state.isInstalled {
+            installScreenReader(in: state)
+            return
+        }
+        current.screenReaderChanging = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { current.screenReaderChanging = false }
+            do {
+                let after: ScreenReaderState
+                if let driver {
+                    after = try await driver.setScreenReader(on, in: state)
+                } else {
+                    after = ScreenReader.state(afterTurningOn: on, state)
+                    previewScreenReader = after
+                }
+                guard session === current else { return }
+                current.screenReader = after
+                VoiceOver.announce(ScreenReaderWords.announcement(on: after.isOn))
+            } catch {
+                guard session === current else { return }
+                alert = AppAlert(title: ScreenReaderWords.changeFailure(turningOn: on), message: error.localizedDescription)
+            }
+        }
+    }
+
+    /// The first start's TalkBack under VoiceOver (`finishBoot`).
+    private func turnOnScreenReaderForVoiceOver() {
+        guard ScreenReader.turnsOnByItself(firstStart: true, voiceOverRunning: voiceOverRunning(), offer: screenReaderOffer)
+        else { return }
+        VoiceOver.announce(ScreenReaderWords.turningOnForVoiceOver)
+        setScreenReader(true)
+    }
+
+    /// Installs TalkBack and eSpeak NG and turns TalkBack on, behind the busy
+    /// overlay; the overlay stays to say how TalkBack is used.
+    private func installScreenReader(in state: ScreenReaderState) {
+        let current = session
+        runOperation(
+            BusyState(title: ScreenReaderWords.installTitle, detail: ScreenReaderWords.installingVoice, progress: 0),
+            failure: ScreenReaderWords.installFailure,
+            ending: { _ in (title: ScreenReaderWords.installedTitle, detail: ScreenReaderWords.installedDetail) },
+            { [weak self, driver] update in
+                var after: ScreenReaderState
+                if let driver {
+                    after = try await driver.installScreenReader(in: state, update: update)
+                    after = try await driver.setScreenReader(true, in: after)
+                } else {
+                    after = try await Self.playScreenReaderInstall(state, update)
+                    self?.previewScreenReader = after
+                }
+                update(BusyUpdate(progress: 1))
+                if self?.session === current { current.screenReader = after }
+                return after
+            }
+        )
+    }
+
+    /// The preview's install: both files go over, and TalkBack comes on.
+    private static func playScreenReaderInstall(
+        _ state: ScreenReaderState, _ update: @Sendable (BusyUpdate) -> Void
+    ) async throws -> ScreenReaderState {
+        for step in 1...20 {
+            try await Task.sleep(for: .milliseconds(80))
+            update(BusyUpdate(
+                progress: Double(step) / 20 * 0.95,
+                detail: step <= 7 ? ScreenReaderWords.installingVoice : ScreenReaderWords.installingTalkBack))
+        }
+        update(BusyUpdate(detail: ScreenReaderWords.turningOn, cancellable: false))
+        try await Task.sleep(for: .milliseconds(500))
+        let installed = ScreenReaderState(
+            installedService: ScreenReader.services[0], enabledServices: state.enabledServices,
+            speechEngineInstalled: true)
+        return ScreenReader.state(afterTurningOn: true, installed)
+    }
+
+    /// The Accessibility key of the side keys; nil where the session offers
+    /// no TalkBack.
+    var screenReaderKey: ScreenReaderKeyActions? {
+        guard offersScreenReader else { return nil }
+        return ScreenReaderKeyActions(
+            offer: screenReaderOffer, changing: session.screenReaderChanging,
+            set: { [weak self] in self?.setScreenReader($0) },
+            openSettings: { [weak self] in self?.openAccessibilitySettings() },
+            refresh: { [weak self] in Task { await self?.refreshScreenReader() } }
+        )
+    }
+
+    /// Opens Android's Accessibility page; the side keys step aside for it.
+    func openAccessibilitySettings() {
+        guard offersScreenReader, spacePause == nil else { return }
+        session.closeSideKeys()
+        guard let driver else { return }
+        Task { [weak self] in
+            do {
+                try await driver.openAccessibilitySettings()
+            } catch {
+                self?.alert = AppAlert(title: ScreenReaderWords.settings, message: error.localizedDescription)
+            }
+        }
+    }
+
     // MARK: Android operations
 
     /// Runs one of Android's operations behind the busy overlay: Settings
@@ -862,6 +1011,22 @@ final class AppModel {
     func finishBoot(_ kind: BootKind) {
         let firstStart = plan == .firstStart
         lifecycle.finishBoot(kind)
+        // The guest's display lets touches through to TalkBack only while it
+        // is on, so the session reads it as soon as Android is up. A first
+        // start under VoiceOver turns TalkBack on as well, so Android's setup
+        // speaks from its first page.
+        let speakFromFirstPage = firstStart && kind != .recovery && voiceOverRunning()
+        Task { [weak self] in
+            guard let self else { return }
+            await refreshScreenReader()
+            guard speakFromFirstPage else { return }
+            // adbd may not answer the moment the display does.
+            for _ in 0..<10 where session.screenReader == nil && offersScreenReader {
+                try? await Task.sleep(for: .seconds(3))
+                await refreshScreenReader()
+            }
+            turnOnScreenReaderForVoiceOver()
+        }
         if driver != nil {
             persistNow()
         } else if kind != .recovery {

@@ -7,11 +7,14 @@ import Foundation
 nonisolated enum AdbActivity {
     case installApp
     case bugReport
+    /// Turning TalkBack on or off, or installing it.
+    case screenReader
 
     fileprivate var notReady: String {
         switch self {
         case .installApp: "install apps"
         case .bugReport: "make a bug report"
+        case .screenReader: "change TalkBack"
         }
     }
 
@@ -19,6 +22,7 @@ nonisolated enum AdbActivity {
         switch self {
         case .installApp: "the app was installed"
         case .bugReport: "the bug report was finished"
+        case .screenReader: "TalkBack changed"
         }
     }
 
@@ -26,6 +30,7 @@ nonisolated enum AdbActivity {
         switch self {
         case .installApp: "installing the app"
         case .bugReport: "making the bug report"
+        case .screenReader: "changing TalkBack"
         }
     }
 
@@ -33,6 +38,7 @@ nonisolated enum AdbActivity {
         switch self {
         case .installApp: "install the app"
         case .bugReport: "make the bug report"
+        case .screenReader: "change TalkBack"
         }
     }
 }

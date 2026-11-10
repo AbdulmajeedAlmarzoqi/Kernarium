@@ -78,6 +78,19 @@
         "frameworks",
         "resources",
         {
+          "kind": "script",
+          "name": "Bundle TalkBack (when staged)",
+          "run-on-every-build": true,
+          "shell": "/bin/sh",
+          "script": [
+            "staged=\"$SRCROOT/../.build/andarium-accessibility\"",
+            "bundled=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Accessibility\"",
+            "rm -rf \"$bundled\"",
+            "[ -f \"$staged/TalkBack.apk\" ] && [ -f \"$staged/eSpeakNG.apk\" ] || exit 0",
+            "mkdir -p \"$bundled\" && cp \"$staged/TalkBack.apk\" \"$staged/eSpeakNG.apk\" \"$bundled/\"",
+            "",
+          ],
+        }, {
           "kind": "copy",
           "name": "Embed Frameworks",
           "bundle-base-path": "frameworks-directory",

@@ -14,12 +14,31 @@ struct SideKeyActions {
     var back: () -> Void
     var home: () -> Void
     var settings: () -> Void
+    /// TalkBack in the Accessibility key; nil leaves the key out.
+    var screenReader: ScreenReaderKeyActions?
+}
+
+/// What the Accessibility key shows of TalkBack and does with it.
+struct ScreenReaderKeyActions {
+    var offer: ScreenReaderOffer
+    /// TalkBack is being turned on or off.
+    var changing: Bool
+    var set: (Bool) -> Void
+    var openSettings: () -> Void
+    /// Reads TalkBack's state from the guest again.
+    var refresh: () -> Void
+}
+
+/// Where VoiceOver goes as the keys open and close.
+enum SideKeyFocus: Hashable {
+    case closed, power
 }
 
 /// The side keys on the screen edge: closed they are a pair of slim glass
 /// keys; tapped they swell in place into Power and a volume rocker, with
-/// Settings and a Back and Home pair right beside them as one small group.
-/// They move up and down the edge with a drag and across to the other edge.
+/// Settings, a Back and Home pair and Accessibility right beside them as one
+/// small group. They move up and down the edge with a drag and across to the
+/// other edge; VoiceOver moves them with the closed keys' actions.
 ///
 /// Only the keys take touches, and the tip beside the closed keys on its own
 /// card. While they are open, a touch anywhere else reaches the guest as it
@@ -47,6 +66,7 @@ struct SideKeysOverlay: View {
     /// The tip's popover is up: while the closed keys are on screen and the
     /// tip wants to show.
     @State private var tipShown = false
+    @AccessibilityFocusState private var focus: SideKeyFocus?
 
     init(mode: StartMode, lit: Bool, open: Binding<Bool>, leading: Bool = false, actions: SideKeyActions) {
         self.mode = mode
@@ -62,17 +82,32 @@ struct SideKeysOverlay: View {
         }
         .ignoresSafeArea(.keyboard)
         .sensoryFeedback(.impact(weight: .light), trigger: keyPresses)
+        .onAppear {
+            if open { actions.screenReader?.refresh() }
+        }
+        .onChange(of: open) { _, isOpen in
+            guard isOpen else { return }
+            // The switch shows what Android's own settings last did.
+            actions.screenReader?.refresh()
+            // VoiceOver goes to the first key once the keys have swollen.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                if open { focus = .power }
+            }
+        }
     }
 
     @ViewBuilder
     private func keys(in size: CGSize) -> some View {
         let edgeX: CGFloat = leading ? 0 : size.width
         let closedY = min(max(70, size.height * fraction), size.height - 70)
-        let openY = min(max(118, size.height * fraction), max(118, size.height - 118))
         let inward: CGFloat = leading ? 1 : -1
         let recoveryMode = mode == .recovery
         // The group's width: Power's column, and in Android the column beside it.
         let groupWidth: CGFloat = recoveryMode ? KeyMetrics.width : KeyMetrics.width * 2 + KeyMetrics.columnGap
+        // The open group stays clear of the screen's top and bottom by its
+        // tallest column: Android's has Accessibility under Back and Home.
+        let half = KeyMetrics.columnHeight(keys: !recoveryMode && actions.screenReader != nil ? 4 : 3) / 2 + 20
+        let openY = min(max(half, size.height * fraction), max(half, size.height - half))
 
         ZStack {
             if open {
@@ -98,7 +133,10 @@ struct SideKeysOverlay: View {
                         }
                     }
                 }
-                .accessibilityAction(.escape) { setOpen(false) }
+                .accessibilityAction(.escape) {
+                    setOpen(false)
+                    focus = .closed
+                }
                 .position(x: edgeX + inward * (KeyMetrics.edgeGap + groupWidth / 2), y: openY)
             } else {
                 ClosedKeys(space: keysSpace, leading: leading)
@@ -114,6 +152,9 @@ struct SideKeysOverlay: View {
                         for await shows in tip.shouldDisplayUpdates { tipShown = shows }
                     }
                     .onDisappear { tipShown = false }
+                    .accessibilityFocused($focus, equals: .closed)
+                    .accessibilityAction { setOpen(true) }
+                    .accessibilityActions { closedKeysActions }
                     .position(x: edgeX + inward * 18, y: closedY)
                     .gesture(dragKeys(size: size))
                     .onTapGesture { setOpen(true) }
@@ -121,10 +162,29 @@ struct SideKeysOverlay: View {
         }
     }
 
+    /// What VoiceOver can do with the closed keys besides opening them: turn
+    /// TalkBack on or off at once, and move them as a drag would.
+    @ViewBuilder
+    private var closedKeysActions: some View {
+        if mode == .normal, let screenReader = actions.screenReader, screenReader.offer.canChange, !screenReader.changing {
+            let on = !screenReader.offer.isOn
+            Button(on ? "Turn TalkBack on" : "Turn TalkBack off") { screenReader.set(on) }
+        }
+        Button(leading ? "Move to the right edge" : "Move to the left edge") {
+            withAnimation(.snappy) { leading.toggle() }
+        }
+        if fraction > 0.15 {
+            Button("Move up") { withAnimation(.snappy) { fraction = max(0.1, fraction - 0.15) } }
+        }
+        if fraction < 0.85 {
+            Button("Move down") { withAnimation(.snappy) { fraction = min(0.9, fraction + 0.15) } }
+        }
+    }
+
     private var powerColumn: some View {
         OpenKeys(
             space: keysSpace, recovery: mode == .recovery,
-            lit: lit,
+            lit: lit, focus: $focus,
             power: { pressed(actions.power) }, powerHold: holdPower,
             volumeUp: { pressed(actions.volumeUp) }, volumeDown: { pressed(actions.volumeDown) }
         )
@@ -134,7 +194,8 @@ struct SideKeysOverlay: View {
         GuestKeys(
             settings: openSettings,
             back: { pressed(actions.back) },
-            home: { pressed(actions.home) }
+            home: { pressed(actions.home) },
+            screenReader: actions.screenReader
         )
         .transition(
             .asymmetric(
@@ -199,6 +260,12 @@ enum KeyMetrics {
     static let rowGap: CGFloat = 10
     static let columnGap: CGFloat = 8
     static let edgeGap: CGFloat = 8
+
+    /// The height of a column of `keys` keys, a pair counting as two.
+    static func columnHeight(keys: Int) -> CGFloat {
+        // A pair is one capsule: its two keys have no gap between them.
+        CGFloat(keys) * keyHeight + CGFloat(max(keys - 2, 0)) * rowGap
+    }
 }
 
 /// The closed keys: Power and a longer volume rocker, each a plain glass key
@@ -219,8 +286,9 @@ struct ClosedKeys: View {
         .contentShape(Rectangle())
         .accessibilityElement()
         .accessibilityLabel("Side keys")
-        .accessibilityHint("Opens Power, volume, Back, Home and Settings")
+        .accessibilityHint("Opens Power, volume, Back, Home, Settings and Accessibility. Actions move the keys.")
         .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("side-keys")
     }
 
     private func key(height: CGFloat) -> some View {
@@ -238,6 +306,7 @@ struct OpenKeys: View {
     let space: Namespace.ID
     let recovery: Bool
     let lit: Bool
+    var focus: AccessibilityFocusState<SideKeyFocus?>.Binding
     let power: () -> Void
     let powerHold: () -> Void
     let volumeUp: () -> Void
@@ -264,9 +333,12 @@ struct OpenKeys: View {
             .onLongPressGesture(minimumDuration: 0.6, perform: powerHold)
             .accessibilityElement()
             .accessibilityLabel("Power")
-            .accessibilityHint(recovery ? "Chooses the highlighted item" : "Hold for the power menu")
+            .accessibilityHint(recovery ? "Chooses the highlighted item" : "Presses Power. The Power menu action holds it.")
             .accessibilityAddTraits(.isButton)
+            .accessibilityAction { power() }
             .accessibilityAction(named: "Power menu", powerHold)
+            .accessibilityFocused(focus, equals: .power)
+            .accessibilityIdentifier("side-keys-power")
 
             KeyPair(
                 top: (recovery ? "chevron.up" : "plus", recovery ? "Up" : "Volume up", volumeUp),
@@ -279,11 +351,13 @@ struct OpenKeys: View {
 }
 
 /// The keys Android has and an iPhone does not, beside Power and volume:
-/// Settings across from Power, and Back above Home across from the rocker.
+/// Settings across from Power, Back above Home across from the rocker, and
+/// Accessibility, TalkBack's key, below them.
 struct GuestKeys: View {
     let settings: () -> Void
     let back: () -> Void
     let home: () -> Void
+    var screenReader: ScreenReaderKeyActions?
 
     var body: some View {
         VStack(spacing: KeyMetrics.rowGap) {
@@ -303,8 +377,63 @@ struct GuestKeys: View {
                 bottom: ("circle.fill", "Home", home),
                 glyphSize: 16
             )
+
+            if let screenReader {
+                AccessibilityKey(key: screenReader)
+            }
         }
         .foregroundStyle(.primary)
+    }
+}
+
+/// TalkBack's key: a menu that turns Android's screen reader on and off and
+/// opens Android's accessibility settings. A light under the glyph shows
+/// TalkBack on, as Power's shows the screen on.
+struct AccessibilityKey: View {
+    let key: ScreenReaderKeyActions
+
+    var body: some View {
+        Menu {
+            Toggle(isOn: Binding(get: { key.offer.isOn }, set: { key.set($0) })) {
+                Text(ScreenReaderWords.name)
+                if let detail = key.offer.detail {
+                    Text(detail)
+                }
+            }
+            .disabled(!key.offer.canChange || key.changing)
+            Button(action: key.openSettings) {
+                Label {
+                    Text(ScreenReaderWords.settings)
+                    Text(ScreenReaderWords.settingsDetail)
+                } icon: {
+                    Image(systemName: "gearshape")
+                }
+            }
+        } label: {
+            VStack(spacing: 3) {
+                if key.changing {
+                    ProgressView()
+                        .frame(height: 24)
+                } else {
+                    Image(systemName: "accessibility")
+                        .font(.system(size: 20, weight: .semibold))
+                        .accessibilityHidden(true)
+                }
+                Circle()
+                    .fill(key.offer.isOn ? Color.accentColor : Color.gray.opacity(0.5))
+                    .frame(width: 5, height: 5)
+                    .shadow(color: key.offer.isOn ? Color.accentColor : .clear, radius: 3)
+            }
+            .frame(width: KeyMetrics.width, height: KeyMetrics.keyHeight)
+            .contentShape(.capsule)
+        }
+        .menuOrder(.fixed)
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .accessibilityLabel(ScreenReaderWords.keyLabel)
+        .accessibilityValue(key.offer.spokenValue)
+        .accessibilityHint(ScreenReaderWords.keyHint)
+        .accessibilityIdentifier("side-keys-accessibility")
     }
 }
 
@@ -343,7 +472,7 @@ struct KeyPair: View {
 /// keys have been opened or the tip closed, and appears at most three times.
 nonisolated struct SideKeysTip: Tip {
     var title: Text { Text("Side keys") }
-    var message: Text? { Text("Tap for Back, Home and Settings. Hold Power for the power menu. Drag to move.") }
+    var message: Text? { Text("Tap for Back, Home, Settings and TalkBack. Hold Power for the power menu. Drag to move.") }
     var image: Image? { Image(systemName: "hand.tap") }
     var options: [any TipOption] { [MaxDisplayCount(3)] }
 }
