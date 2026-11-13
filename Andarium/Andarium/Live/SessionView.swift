@@ -50,8 +50,7 @@ struct SessionView: View {
             volumeDown: { runtime?.press(.volumeDown) },
             back: { runtime?.press(.back) },
             home: { runtime?.press(.home) },
-            settings: { settings = true },
-            screenReader: model.screenReaderKey
+            settings: { settings = true }
         )
     }
 }

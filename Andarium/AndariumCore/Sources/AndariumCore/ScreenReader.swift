@@ -6,28 +6,21 @@ import Foundation
 /// off over adb the way Android's own Accessibility page does: the service
 /// joins or leaves the secure setting `enabled_accessibility_services`, and
 /// `accessibility_enabled` follows whether any service is left. Every other
-/// service the guest has turned on stays as it is.
-///
-/// A guest whose system has no TalkBack gets the copy the application
-/// carries, with eSpeak NG to speak it, through the same install path as an
-/// APK picked in Files.
+/// service the guest has turned on stays as it is. The system image carries
+/// TalkBack and its voice; a guest whose system has none offers no switch.
 public enum ScreenReader {
     /// The TalkBack builds Andarium recognises, by their service: the
-    /// open-source build the application carries, then Google's own.
+    /// open-source build the system image carries, then Google's own.
     public static let services = [
         "com.android.talkback/com.google.android.marvin.talkback.TalkBackService",
         "com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService",
     ]
 
-    /// The speech engine the application carries beside TalkBack.
-    public static let speechEnginePackage = "com.reecedunn.espeak"
-
     /// What to run in the guest's shell to read the state; `parse` reads its
     /// output. `pm list packages` filters by substring and prints
     /// `package:<name>` lines.
     public static let stateCommand =
-        "pm list packages talkback; pm list packages \(speechEnginePackage); "
-        + "echo \"services=$(settings get secure enabled_accessibility_services)\""
+        "pm list packages talkback; echo \"services=$(settings get secure enabled_accessibility_services)\""
 
     /// The state from the output of `stateCommand`; nil when the output is
     /// not what the command prints.
@@ -44,10 +37,7 @@ public enum ScreenReader {
         }
         guard let enabled else { return nil }
         let installed = services.first { packages.contains(package(of: $0)) }
-        return ScreenReaderState(
-            installedService: installed, enabledServices: enabled,
-            speechEngineInstalled: packages.contains(speechEnginePackage)
-        )
+        return ScreenReaderState(installedService: installed, enabledServices: enabled)
     }
 
     /// The state from a finished `stateCommand`: nil when it failed.
@@ -81,24 +71,16 @@ public enum ScreenReader {
             + "settings put secure accessibility_enabled 1"
     }
 
-    /// Makes eSpeak NG the guest's speech engine when nobody has chosen one,
-    /// so TalkBack speaks with it from the first word. A choice made in
-    /// Android's settings stays.
-    public static let speechEngineCommand =
-        "[ \"$(settings get secure tts_default_synth)\" = null ] && "
-        + "settings put secure tts_default_synth \(speechEnginePackage); true"
-
     /// Opens Android's Accessibility page, where TalkBack's own settings and
     /// the other services are.
     public static let settingsCommand = "am start -a android.settings.ACCESSIBILITY_SETTINGS >/dev/null"
 
     /// Whether Andarium turns TalkBack on without being asked: at the first
     /// start of a guest while VoiceOver runs, so that Android's setup speaks
-    /// from its first page, when TalkBack is off and can be turned on. Later
+    /// from its first page, when the system has TalkBack and it is off. Later
     /// starts leave TalkBack as the person left it.
     public static func turnsOnByItself(firstStart: Bool, voiceOverRunning: Bool, offer: ScreenReaderOffer) -> Bool {
-        guard firstStart, voiceOverRunning else { return false }
-        return offer == .off || offer == .installable
+        firstStart && voiceOverRunning && offer == .off
     }
 
     /// The state `command(turningOn:in:)` leaves.
@@ -125,13 +107,10 @@ public struct ScreenReaderState: Equatable, Sendable {
     public var installedService: String?
     /// Every accessibility service the guest has turned on, in its order.
     public var enabledServices: [String]
-    /// eSpeak NG is installed.
-    public var speechEngineInstalled: Bool
 
-    public init(installedService: String?, enabledServices: [String], speechEngineInstalled: Bool) {
+    public init(installedService: String?, enabledServices: [String]) {
         self.installedService = installedService
         self.enabledServices = enabledServices
-        self.speechEngineInstalled = speechEngineInstalled
     }
 
     /// TalkBack is installed and on.
@@ -143,19 +122,16 @@ public struct ScreenReaderState: Equatable, Sendable {
     public var isInstalled: Bool { installedService != nil }
 }
 
-/// What the side keys' Accessibility key offers for TalkBack.
+/// What the TalkBack switch of the session's Settings offers.
 public enum ScreenReaderOffer: Equatable, Sendable {
     /// Not read yet, or the guest cannot be asked now.
     case unknown
     case on
     case off
-    /// The guest has no TalkBack and the application carries one: turning it
-    /// on installs it first.
-    case installable
-    /// The guest has no TalkBack and the application carries none.
+    /// The guest's system has no TalkBack.
     case unavailable
 
-    public init(state: ScreenReaderState?, carriesScreenReader: Bool) {
+    public init(state: ScreenReaderState?) {
         guard let state else {
             self = .unknown
             return
@@ -163,7 +139,7 @@ public enum ScreenReaderOffer: Equatable, Sendable {
         if state.isInstalled {
             self = state.isOn ? .on : .off
         } else {
-            self = carriesScreenReader ? .installable : .unavailable
+            self = .unavailable
         }
     }
 
@@ -173,7 +149,7 @@ public enum ScreenReaderOffer: Equatable, Sendable {
     /// Whether the switch can be used.
     public var canChange: Bool {
         switch self {
-        case .on, .off, .installable: true
+        case .on, .off: true
         case .unknown, .unavailable: false
         }
     }
@@ -182,19 +158,8 @@ public enum ScreenReaderOffer: Equatable, Sendable {
     public var detail: String? {
         switch self {
         case .unknown: "Checking\u{2026}"
-        case .installable: "Installs TalkBack and the eSpeak NG voice"
         case .unavailable: "Not in this system image"
         case .on, .off: nil
-        }
-    }
-
-    /// What VoiceOver says the Accessibility key holds.
-    public var spokenValue: String {
-        switch self {
-        case .on: "TalkBack on"
-        case .off, .installable: "TalkBack off"
-        case .unknown: "TalkBack state unknown"
-        case .unavailable: "TalkBack unavailable"
         }
     }
 }

@@ -128,31 +128,23 @@ final class StubDriver: RuntimeDriver {
         try await install(update)
     }
 
-    /// TalkBack as the stub plays it: what the guest reports, and the calls
-    /// the model made.
-    var carriesScreenReader = true
+    /// TalkBack as the stub plays it: what the guest reports, nil while it
+    /// cannot be asked, and the calls the model made. The system carries
+    /// TalkBack, off.
     var screenReaderState: ScreenReaderState? = ScreenReaderState(
-        installedService: nil, enabledServices: [], speechEngineInstalled: false)
+        installedService: ScreenReader.services[0], enabledServices: [])
     var screenReaderError: Error?
+    private(set) var screenReaderReads = 0
     private(set) var screenReaderChanges: [Bool] = []
-    private(set) var screenReaderInstalls = 0
     private(set) var accessibilitySettingsOpened = 0
-    func readScreenReader() async -> ScreenReaderState? { screenReaderState }
+    func readScreenReader() async -> ScreenReaderState? {
+        screenReaderReads += 1
+        return screenReaderState
+    }
     func setScreenReader(_ on: Bool, in state: ScreenReaderState) async throws -> ScreenReaderState {
         screenReaderChanges.append(on)
         if let screenReaderError { throw screenReaderError }
         let after = ScreenReader.state(afterTurningOn: on, state)
-        screenReaderState = after
-        return after
-    }
-    func installScreenReader(
-        in state: ScreenReaderState, update: @escaping @Sendable (BusyUpdate) -> Void
-    ) async throws -> ScreenReaderState {
-        screenReaderInstalls += 1
-        if let screenReaderError { throw screenReaderError }
-        let after = ScreenReaderState(
-            installedService: ScreenReader.services[0], enabledServices: state.enabledServices,
-            speechEngineInstalled: true)
         screenReaderState = after
         return after
     }

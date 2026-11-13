@@ -40,6 +40,9 @@ struct AppEntry {
     /// The model takes VoiceOver as running, which the Simulator never has,
     /// so a first start plays TalkBack turning on by itself.
     var voiceOver: Bool
+    /// The mock guest's TalkBack: "on", or "missing" for a system without
+    /// it; absent, the system carries it and it is off.
+    var talkBack: String?
 
     static func fromArguments() -> AppEntry {
         let defaults = UserDefaults.standard
@@ -55,7 +58,8 @@ struct AppEntry {
             device: defaults.string(forKey: "device"),
             memoryMiB: defaults.string(forKey: "memoryMiB").flatMap { Int($0) },
             colorScheme: defaults.string(forKey: "colorScheme"),
-            voiceOver: defaults.bool(forKey: "voiceOver")
+            voiceOver: defaults.bool(forKey: "voiceOver"),
+            talkBack: defaults.string(forKey: "talkBack")
         )
     }
 
@@ -123,6 +127,14 @@ struct AppEntry {
         let freeze = !play
         model.jitAvailable = true
         if voiceOver { model.voiceOverRunning = { true } }
+        switch talkBack {
+        case "on":
+            model.previewScreenReader.enabledServices = [ScreenReader.services[0]]
+        case "missing":
+            model.previewScreenReader = ScreenReaderState(installedService: nil, enabledServices: [])
+        default:
+            break
+        }
 
         func boot(_ kind: BootKind, stage: Int, seconds: Int) {
             model.frozenBootStage = freeze ? (bootStage ?? stage) : nil

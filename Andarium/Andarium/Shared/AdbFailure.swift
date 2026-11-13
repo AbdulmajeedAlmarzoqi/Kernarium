@@ -9,7 +9,7 @@ nonisolated enum AdbActivity {
     case bugReport
     /// Browsing the guest's files, importing and exporting.
     case files
-    /// Turning TalkBack on or off, or installing it.
+    /// Turning TalkBack on or off.
     case screenReader
 
     fileprivate var notReady: String {

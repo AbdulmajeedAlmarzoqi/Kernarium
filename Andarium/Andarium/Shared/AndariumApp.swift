@@ -84,7 +84,7 @@ struct RootView: View {
     static func spoken(_ phase: Phase) -> String? {
         switch phase {
         case .running(.normal):
-            "Android is running. The side keys on the screen edge have Back, Home, Settings and TalkBack."
+            "Android is running. The side keys on the screen edge have Back, Home and Settings, where TalkBack is."
         case .running(.recovery):
             "Recovery is running. The side keys\u{2019} volume keys move, and Power chooses."
         case .home, .booting, .failed:

@@ -23,25 +23,15 @@ enum VoiceOver {
     }
 }
 
-/// The words of TalkBack in the side keys, the busy overlay and the guest's
-/// display.
+/// The words of TalkBack in the session's Settings and on the guest's display.
 nonisolated enum ScreenReaderWords {
+    static let section = "Accessibility"
     static let name = "TalkBack"
-    static let keyLabel = "Accessibility"
-    static let keyHint = "Turns TalkBack, Android\u{2019}s screen reader, on or off"
     static let settings = "Accessibility settings"
-    static let settingsDetail = "Opens Android\u{2019}s accessibility settings"
-
-    static let installTitle = "Installing TalkBack"
-    static let installFailure = "TalkBack not installed"
-    static let installingVoice = "Installing the eSpeak NG voice\u{2026}"
-    static let installingTalkBack = "Installing TalkBack\u{2026}"
-    static let turningOn = "Turning TalkBack on\u{2026}"
-    static let installedTitle = "TalkBack is on"
-    static let installedDetail = "Android speaks what you touch: double-tap to open an item, and swipe right or left to move between items. Turn TalkBack off with the Accessibility key of the side keys."
+    static let footer = "TalkBack, Android\u{2019}s screen reader, speaks what you touch. While it is on, touches reach Android with VoiceOver on too."
+    static let footerUnavailable = "This system image has no TalkBack."
     static let turningOnForVoiceOver = "VoiceOver is on, so Andarium is turning on TalkBack, Android\u{2019}s screen reader."
     static let missing = "Android has no TalkBack to turn on."
-    static let notFoundAfterInstall = "Android didn\u{2019}t list TalkBack after the install. Try again."
 
     static func changeFailure(turningOn on: Bool) -> String {
         on ? "TalkBack didn\u{2019}t turn on" : "TalkBack didn\u{2019}t turn off"
@@ -52,5 +42,5 @@ nonisolated enum ScreenReaderWords {
     /// What VoiceOver calls Android's screen, and what it says of it.
     static let displayLabel = "Android screen"
     static let displayHintDirect = "TalkBack is on. Touches go straight to Android, and TalkBack speaks."
-    static let displayHint = "Turn on TalkBack with the side keys\u{2019} Accessibility key to use Android with a screen reader."
+    static let displayHint = "Turn on TalkBack in Settings, under the side keys, to use Android with a screen reader."
 }

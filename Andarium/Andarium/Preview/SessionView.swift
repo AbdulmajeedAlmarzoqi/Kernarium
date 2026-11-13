@@ -53,8 +53,7 @@ struct SessionView: View {
                     power: pressPower, powerHold: holdPower,
                     volumeUp: { pressVolume(up: true) }, volumeDown: { pressVolume(up: false) },
                     back: pressBack, home: pressHome,
-                    settings: { settings = true },
-                    screenReader: model.screenReaderKey
+                    settings: { settings = true }
                 )
             )
         }

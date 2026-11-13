@@ -424,24 +424,12 @@ final class LiveRuntime: RuntimeDriver {
 
     // MARK: TalkBack
 
-    /// TalkBack and eSpeak NG, when this build carries them.
-    private let screenReaderPayload = ScreenReaderPayload.carried()
-
-    var carriesScreenReader: Bool { screenReaderPayload != nil }
-
     func readScreenReader() async -> ScreenReaderState? {
         await operations.screenReader()
     }
 
     func setScreenReader(_ on: Bool, in state: ScreenReaderState) async throws -> ScreenReaderState {
         try await operations.setScreenReader(on, in: state)
-    }
-
-    func installScreenReader(
-        in state: ScreenReaderState, update: @escaping @Sendable (BusyUpdate) -> Void
-    ) async throws -> ScreenReaderState {
-        guard let screenReaderPayload else { throw AdbFailure(message: ScreenReaderWords.missing) }
-        return try await operations.installScreenReader(screenReaderPayload, in: state, update: update)
     }
 
     func openAccessibilitySettings() async throws {
