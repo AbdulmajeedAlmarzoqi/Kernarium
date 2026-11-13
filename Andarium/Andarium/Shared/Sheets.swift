@@ -145,6 +145,16 @@ struct InfoSheet: View {
                     }
                     .padding(.vertical, 6)
                     .accessibilityElement(children: .combine)
+                    if !model.whatsNew.releases.isEmpty {
+                        NavigationLink(value: InfoPage.whatsNew) {
+                            HStack(spacing: 12) {
+                                IconTile(symbol: "sparkles")
+                                    .accessibilityHidden(true)
+                                Text("What\u{2019}s New")
+                            }
+                        }
+                        .accessibilityIdentifier("info-whats-new")
+                    }
                 }
                 Section("System info") {
                     LabeledContent("Build", value: model.system.buildLabel)
@@ -186,6 +196,7 @@ struct InfoSheet: View {
                 switch page {
                 case .acknowledgements: AcknowledgementsView()
                 case .license(let id): LicenseView(projectID: id)
+                case .whatsNew: WhatsNewHistoryPage()
                 }
             }
             .toolbar {

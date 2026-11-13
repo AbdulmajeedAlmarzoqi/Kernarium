@@ -7,7 +7,7 @@ import Testing
 struct CapabilitiesTests {
     @Test func theDeviceOffersWhatTheRuntimeDoes() {
         let device = Capabilities.device
-        #expect(device.bugReport && device.apkInstall && device.adbOverNetwork)
+        #expect(device.bugReport && device.apkInstall && device.adbOverNetwork && device.guestFiles)
         // The statistics are the runtime's own readings.
         #expect(device.statistics)
         // TalkBack goes through the same adb channel.
@@ -16,7 +16,7 @@ struct CapabilitiesTests {
 
     @Test func thePreviewPretendsToDoEverything() {
         let preview = Capabilities.preview
-        #expect(preview.bugReport && preview.apkInstall && preview.adbOverNetwork)
+        #expect(preview.bugReport && preview.apkInstall && preview.adbOverNetwork && preview.guestFiles)
         #expect(preview.statistics)
         #expect(preview.screenReader)
     }
