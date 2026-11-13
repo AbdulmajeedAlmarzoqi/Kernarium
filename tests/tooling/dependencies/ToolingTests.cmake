@@ -15,7 +15,7 @@ uml_add_tooling_test(
     TIMEOUT 120)
 
 # The accessibility builder refuses an incomplete toolchain before it builds,
-# and builds the TalkBack package ScreenReader names.
+# and builds the packages the LineageOS product and ScreenReader name.
 uml_add_tooling_test(
     NAME dependency-andarium-accessibility-builder
     COMMAND ${PROJECT_SOURCE_DIR}/tests/tooling/dependencies/test_build_andarium_accessibility.sh
