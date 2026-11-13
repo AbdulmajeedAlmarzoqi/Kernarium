@@ -17,6 +17,7 @@ Andarium/Live/        the runtime, storage and session of the device app
 AndariumCore/         Swift package: the model and the adb client, no UIKit; it
                       re-exports GuestHostCore (../GuestHost/Core)
 AndariumTests/        hosted tests of the device app
+AndariumPreviewUITests/ UI tests of the Simulator preview
 Config/               entitlements, Info.plist, privacy manifest, bridging header
 scripts/              system staging, the App Store bundle check,
                       acknowledgements, screen capture
@@ -53,6 +54,9 @@ or state directly, and `scripts/capture-screens.py` (`--help`) captures them:
 xcodebuild -project Andarium/Andarium.xcodeproj -scheme AndariumPreview \
     -destination 'platform=iOS Simulator,name=iPad Pro 11-inch (M5)' build
 ```
+
+`AndariumPreviewUITests` drives the preview through those arguments; the
+scheme's `test` action runs it.
 
 ## Devices
 
