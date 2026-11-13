@@ -51,16 +51,22 @@ script below; per-platform contracts are under [`platforms/`](platforms).
   uses for BTF, at `.build/dependencies/kernel-host-tools`; patch-managed
   Darwin ports that run only on the build host.
 - `andarium-accessibility`: TalkBack and eSpeak NG, the screen reader and the
-  voice Andarium installs into a guest without them, built with Gradle as two
-  signed APKs staged in `.build/andarium-accessibility`
-  ([`../Andarium/README.md`](../Andarium/README.md#android-operations)). It is
-  the one builder that is not offline: Gradle fetches the applications' Maven
-  dependencies and eSpeak NG's wrapper, and eSpeak NG's CMake fetches libsonic.
-  The TalkBack series ([`patches/talkback`](patches/talkback/series.tsv)) builds
-  it on an Apple silicon host and leaves every Google Play services library out
-  of the phone build, which recognises no text in images (OCR) as a result. A guest takes an update of either only from the
-  key that signed its copy, so builds that ship sign with one kept key
-  (`--keystore`).
+  voice the LineageOS image carries, built with Gradle as the accessibility
+  artifact in `.build/andarium-accessibility`: both release APKs, unsigned, and
+  `artifact.json` ([`../android/lineage-24/README.md`](../android/lineage-24/README.md#accessibility)).
+  Besides its sources (TalkBack, eSpeak NG and libsonic, which eSpeak NG's
+  series takes from a given checkout) the build takes the archives of
+  [`andarium-accessibility/archives.tsv`](andarium-accessibility/archives.tsv):
+  both Gradle distributions and every Maven artifact the two builds resolve,
+  which `prepare.sh --archive-manifest` fetches and verifies. The builder runs
+  Gradle with `--offline`, a Gradle user home of its own and a Maven repository
+  laid out from those archives. `andarium-accessibility/pin-archives.py`
+  rewrites the list after an online build of each application with
+  `--write-verification-metadata sha256` when a pin moves; the pinned AAPT2 is
+  the Apple silicon Mac's. The TalkBack series
+  ([`patches/talkback`](patches/talkback/series.tsv)) builds it on that host
+  and leaves every Google Play services library out of the phone build, which
+  recognises no text in images (OCR) as a result.
 - `x86-conformance`: the test-only FEX and K x86-64 corpora and their pinned
   producer inputs, used to generate the checked-in x86 unit corpus (see
   [`../tools/fex-tests/README.md`](../tools/fex-tests/README.md)).

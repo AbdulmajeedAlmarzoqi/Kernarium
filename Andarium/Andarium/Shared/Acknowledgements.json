@@ -357,8 +357,8 @@
    "id": "espeak-ng",
    "group": "accessibility",
    "name": "eSpeak NG",
-   "copyright": "2005-2015 Jonathan Duddington; 2012-2026 Reece H. Dunn; Google Inc. and other eSpeak NG contributors",
-   "license": "GNU GPL v3 or later; Apache License 2.0 for parts of the Android app",
+   "copyright": "2005-2015 Jonathan Duddington; 2012-2026 Reece H. Dunn; Google Inc. and other eSpeak NG contributors; libsonic: 2010 Bill Cox",
+   "license": "GNU GPL v3 or later; Apache License 2.0 for parts of the Android app and for libsonic",
    "spdx": "GPL-3.0-or-later AND Apache-2.0"
   }
  ]

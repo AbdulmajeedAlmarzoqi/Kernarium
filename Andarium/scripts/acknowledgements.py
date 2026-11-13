@@ -71,6 +71,7 @@ SOURCES = {
     "zstd": "zstd",
     "talkback": "talkback",
     "espeak-ng": "espeak-ng",
+    "sonic": "sonic",
 }
 
 MESA_HOLDERS = (
@@ -391,8 +392,7 @@ def projects(texts: Texts) -> list[dict]:
             components=["zstd-decompression"],
             texts=[own(None, "zstd", "LICENSE")],
         ),
-        # The screen reader and its voice, which Andarium installs into a guest
-        # without them when the build carries their APKs
+        # The screen reader and its voice, which the system image carries
         # (dependencies/build-andarium-accessibility.sh).
         entry(
             id="talkback",
@@ -407,8 +407,8 @@ def projects(texts: Texts) -> list[dict]:
             id="espeak-ng",
             group="accessibility",
             name="eSpeak NG",
-            copyright="2005-2015 Jonathan Duddington; 2012-2026 Reece H. Dunn; Google Inc. and other eSpeak NG contributors",
-            license="GNU GPL v3 or later; Apache License 2.0 for parts of the Android app",
+            copyright="2005-2015 Jonathan Duddington; 2012-2026 Reece H. Dunn; Google Inc. and other eSpeak NG contributors; libsonic: 2010 Bill Cox",
+            license="GNU GPL v3 or later; Apache License 2.0 for parts of the Android app and for libsonic",
             spdx="GPL-3.0-or-later AND Apache-2.0",
             licenses=["apache-2.0"],
             texts=[own("GNU General Public License, Version 3", "espeak-ng", "COPYING")],
